@@ -16,5 +16,3 @@ if st.button("Start test"):
 if st.button("Show test_results"):
     st.write(st.session_state.test_results)
 
-with open("test_data.csv", "w") as t:
-    with open("")
