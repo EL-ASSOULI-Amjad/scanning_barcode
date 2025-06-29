@@ -23,13 +23,13 @@ if st.button("Show results"):
         st.write("No barcodes scanned yet.")
 
 # Camera input for capturing images
-camera_image = st.camera_input("Take a picture")
+camera_image = st.file_uploader("Upload the image with the barcode", type=["jpg", "png"], accept_multiple_files=False, key=None)
 
 # Process the image when captured
 if camera_image is not None:
     # Convert the uploaded image to a format OpenCV can process
-    img = Image.open(camera_image)
-    frame_rgb = np.array(img)  # Convert PIL image to numpy array (RGB)
+    
+    frame_rgb = np.array(camera_image)  # Convert PIL image to numpy array (RGB)
 
     # Decode barcodes in the image
     barcodes_found = False
