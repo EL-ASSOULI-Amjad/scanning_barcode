@@ -28,8 +28,10 @@ camera_image = st.file_uploader("Upload the image with the barcode", type=["jpg"
 # Process the image when captured
 if camera_image is not None:
     # Convert the uploaded image to a format OpenCV can process
-    
-    frame_rgb = np.array(camera_image)  # Convert PIL image to numpy array (RGB)
+    img = Image.open(camera_image)
+    frame_rgb = np.array(img.convert("RGB"))
+    if frame_rgb.dtype != np.uint8:
+        frame_rgb = frame_rgb.astype(np.uint8)
 
     # Decode barcodes in the image
     barcodes_found = False
