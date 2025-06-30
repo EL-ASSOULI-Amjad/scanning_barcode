@@ -30,6 +30,8 @@ if camera_image is not None:
     # Convert the uploaded image to a format OpenCV can process
     img = Image.open(camera_image)
     frame_rgb = np.array(img.convert("RGB"))
+    # Create a copy for the second image BEFORE any processing or drawing
+    frame_rgb_2 = frame_rgb.copy()
     # FIX 1: Change COLOR_BGR2GRAY to COLOR_RGB2GRAY since PIL gives RGB format
     gray = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2GRAY)
     resized = cv2.resize(gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_LINEAR)
@@ -40,16 +42,16 @@ if camera_image is not None:
         thresh = thresh.astype(np.uint8)
 
     # FIX 2: Try decoding on multiple image versions, not just the heavily processed one
-    images_to_try = [gray, resized, blurred, thresh]
+    image_to_scan = [gray, resized, blurred, thresh]
     
     # Decode barcodes in the image
-    barcodes_found = False
-    for img_version in images_to_try:
+    barcodes_found_processed = False
+    for img_version in image_to_scan:
         for info in decode(img_version):
-            barcodes_found = True
+            barcodes_found_processed = True
             barcode = info.data.decode("utf-8")  # Decode bytes to string
             barcode_type = info.type
-            data = {"barcode": barcode, "type": barcode_type}
+            data = {"barcode": barcode, "type": barcode_type, "model": "with image preparation"}
 
             # FIX 3: Draw on the original RGB image, not the processed grayscale
             # Scale coordinates back to original image size if using resized version
@@ -76,10 +78,53 @@ if camera_image is not None:
                 st.session_state.results.append(data)
         
         # If barcodes found, break out of the loop
-        if barcodes_found:
+        if barcodes_found_processed:
             break
 
-    # Display the image with barcode annotations (or original if no barcodes)
-    st.image(frame_rgb, channels="RGB", use_column_width=True)
-    if not barcodes_found:
-        st.write("No barcodes detected in the image.")
+    # Ensure the original image copy is uint8
+    if frame_rgb_2.dtype != np.uint8:
+        frame_rgb_2 = frame_rgb_2.astype(np.uint8)
+
+    # Decode barcodes in the original image without processing
+    barcodes_found_original = False
+    for info in decode(frame_rgb_2):
+        barcodes_found_original = True
+        barcode = info.data.decode("utf-8")  # Decode bytes to string
+        barcode_type = info.type
+        data = {"barcode": barcode, "type": barcode_type, "model": "without image preparation"}
+
+        # Get rectangle coordinates for visualization
+        top_left_2 = (info.rect.left, info.rect.top)
+        bottom_right_2 = (info.rect.left + info.rect.width, info.rect.top + info.rect.height)
+
+        # Draw rectangle and text on the image
+        cv2.rectangle(frame_rgb_2, top_left_2, bottom_right_2, color=(0, 255, 0), thickness=2)
+        cv2.putText(
+            frame_rgb_2,
+            str(barcode),
+            top_left_2,  # FIX 5: Use top_left_2 instead of top_left
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 255, 0),
+            3,
+            cv2.LINE_8,
+        )
+
+        # Append barcode data to results if not already present
+        if data not in st.session_state.results:
+            st.session_state.results.append(data)
+
+    # FIX 6: Display both images properly
+    col1, col2 = st.columns(2)
+    with col1:
+        st.header("With image preparation")
+        # Display the image with barcode annotations (or original if no barcodes)
+        st.image(frame_rgb, channels="RGB", use_column_width=True)
+        if not barcodes_found_processed:
+            st.write("No barcodes detected in the processed image.")
+
+    with col2:
+        st.header("Without image preparation")
+        st.image(frame_rgb_2, channels="RGB", use_column_width=True)
+        if not barcodes_found_original:
+            st.write("No barcodes detected in the original image.")
