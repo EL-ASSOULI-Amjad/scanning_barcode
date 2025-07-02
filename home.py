@@ -153,7 +153,16 @@ if st.button("Show results"):
     else:
         st.write("No barcodes scanned yet.")
 
-st.info("📸 Use your camera to capture images for barcode scanning")
+st.info("📱 **Mobile users:** TAP the barcode on your screen to focus, then capture!")
+
+# Add user instructions for better results
+with st.expander("📱 More tips for better results"):
+    st.markdown("""
+    - 📏 Hold phone 6-12 inches from the barcode
+    - 👆 **Tap the barcode area on your screen** to focus before capturing
+    - 💡 Ensure good lighting (avoid shadows)
+    - 🔄 If blurry, try taking multiple photos
+    """)
 
 # Use Streamlit's camera input
 camera_image = st.camera_input("Take a picture of a barcode")
